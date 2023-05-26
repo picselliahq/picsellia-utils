@@ -5,7 +5,7 @@ from typing import List
 from polygon_to_mask_converter.abstract_converter import AbstractConverter
 
 
-class ValeoConverter(AbstractConverter):
+class CustomConverter(AbstractConverter):
     def _get_masks_filepaths_of_image(self, img_filename: str, label_dir: str
                                       ) -> List[str]:
         """ Find all the paths of the masks linked to an image.
