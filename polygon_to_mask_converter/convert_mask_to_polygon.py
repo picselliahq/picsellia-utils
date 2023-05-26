@@ -1,6 +1,6 @@
 from picsellia import Client
 
-from valeo_converter import ValeoConverter
+from custom_converter import CustomConverter
 
 api_token = ''
 
@@ -12,7 +12,7 @@ client = Client(api_token=api_token, organization_name=organization, host=host)
 
 dataset = client.get_dataset_version_by_id('')
 
-converter = ValeoConverter(images_dir="", masks_dir="", labelmap={})
+converter = CustomConverter(images_dir="", masks_dir="", labelmap={}, conversion_tolerance=0.2)
 
 coco_annotations_object = converter.update_coco_annotations()
 
