@@ -20,5 +20,5 @@ class CustomConverter(AbstractConverter):
         """
         dir_path = os.path.join(self._masks_dir, label_dir)
         img_filename_without_extension = img_filename.split('.')[0]
-        character_to_match = "*" + img_filename_without_extension + "*"
+        character_to_match = img_filename_without_extension + ".*"
         return glob.glob(os.path.join(glob.escape(dir_path), character_to_match))

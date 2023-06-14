@@ -6,6 +6,7 @@ import numpy as np
 from skimage.io import imread
 from skimage.measure import approximate_polygon, find_contours
 from skimage.transform import resize
+from skimage.color import rgb2gray
 
 from coco_annotations import COCOAnnotation
 from utils import find_most_similar_string, find_similar_string, format_polygons, shift_x_and_y_coordinates
@@ -13,7 +14,7 @@ from utils import find_most_similar_string, find_similar_string, format_polygons
 
 class AbstractConverter(ABC):
     def __init__(self, images_dir: str, masks_dir: str, labelmap: Dict[str, str],
-                 conversion_tolerance: float = 0.2) -> None:
+                 conversion_tolerance: float = 0.2, min_contour_points: int = 10) -> None:
         """_summary_
 
         Args:
@@ -47,6 +48,7 @@ class AbstractConverter(ABC):
         self.labelmap = labelmap
         self.coco_annotations = COCOAnnotation(labelmap=self.labelmap)
         self.conversion_tolerance = conversion_tolerance
+        self.min_contour_points = min_contour_points
 
     def update_coco_annotations(self):
         labels_images_directories = os.listdir(self._images_dir)
@@ -82,6 +84,7 @@ class AbstractConverter(ABC):
 
     def _get_formatted_polygons_from_mask(self, mask_filepath: str, img_shape: Tuple[int, int]) -> List:
         mask = imread(mask_filepath)
+        mask = rgb2gray(mask)
         mask = resize(mask, img_shape)
         polygons = self._convert_mask_to_polygons(mask)
         formatted_polygons = format_polygons(polygons=polygons)
@@ -92,7 +95,7 @@ class AbstractConverter(ABC):
         contours = find_contours(mask)
         for contour in contours:
             approximated_contour = approximate_polygon(coords=contour, tolerance=self.conversion_tolerance)
-            if len(approximated_contour) > 3:
+            if len(approximated_contour) > self.min_contour_points:
                 shifted_contour = shift_x_and_y_coordinates(approximated_contour)
                 polygons.append(shifted_contour)
         return polygons
