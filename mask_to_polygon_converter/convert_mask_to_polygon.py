@@ -1,5 +1,5 @@
 from picsellia import Client
-
+from picsellia.types.enums import InferenceType
 from custom_converter import CustomConverter
 
 api_token = ''
@@ -11,12 +11,12 @@ host = "https://app.picsellia.com"
 client = Client(api_token=api_token, organization_name=organization, host=host)
 
 dataset = client.get_dataset_version_by_id('')
-
-converter = CustomConverter(images_dir="", masks_dir="", labelmap={}, conversion_tolerance=0.2)
+dataset.set_type(InferenceType.SEGMENTATION)
+converter = CustomConverter(images_dir="images", masks_dir="masks", labelmap={}, conversion_tolerance=0.8)
 
 coco_annotations_object = converter.update_coco_annotations()
 
-coco_annotations_path = "annotations/coco_annotations.json"
+coco_annotations_path = "coco_annotations.json"
 coco_annotations_object.save_coco_annotations_as_json(json_path=coco_annotations_path)
 
 dataset.import_annotations_coco_file(file_path=coco_annotations_path, force_create_label=True,

@@ -89,11 +89,12 @@ class AbstractConverter(ABC):
 
     def _convert_mask_to_polygons(self, mask: np.ndarray) -> List[np.ndarray]:
         polygons = []
-        contours = find_contours(mask, 0)
+        contours = find_contours(mask)
         for contour in contours:
             approximated_contour = approximate_polygon(coords=contour, tolerance=self.conversion_tolerance)
-            shifted_contour = shift_x_and_y_coordinates(approximated_contour)
-            polygons.append(shifted_contour)
+            if len(approximated_contour) > 3:
+                shifted_contour = shift_x_and_y_coordinates(approximated_contour)
+                polygons.append(shifted_contour)
         return polygons
 
     @abstractmethod
