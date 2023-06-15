@@ -4,6 +4,11 @@ from typing import Tuple
 import numpy as np
 import orjson
 from fuzzywuzzy import fuzz
+import tqdm
+import cv2
+import os
+from picsellia import DatasetVersion
+from picsellia.types.enums import InferenceType
 
 
 def shift_x_and_y_coordinates(polygon: np.ndarray) -> np.ndarray:
@@ -69,3 +74,47 @@ def save_dict_as_json_file(dictionary: dict,
     """
     with open(json_path, "wb") as out_file:
         out_file.write(orjson.dumps(dictionary, option=orjson.OPT_NAIVE_UTC | orjson.OPT_SERIALIZE_NUMPY))
+
+
+def convert_seperated_multiclass_masks_to_polygons(data_path: str,
+                                                   mask_root_path: str,
+                                                   dataset_version: DatasetVersion):
+    """
+
+    Args:
+        data_path: (str)  directory containing the images. Example: data_path = "archive/input"
+        mask_root_path: (str) directory that contains the masks directories. Example: mask_root_path = "Archive"
+        dataset_version: (DatasetVersion) the dataset version containing the assets
+
+    Returns: None
+
+    """
+
+    dataset_version.set_type(InferenceType.SEGMENTATION)
+    input_dir = os.listdir(data_path)
+    labels = os.listdir(mask_root_path)
+    labels.remove(os.path.basename(data_path))
+    print(labels)
+    for fname in tqdm.tqdm(input_dir[2:]):
+        print(fname)
+        asset = dataset_version.find_asset(filename=fname)
+        polygons = []
+        for l in labels:
+            im = cv2.imread(os.path.join(mask_root_path, l, fname))
+            im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+            contours, _ = cv2.findContours(im, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            to_add = (
+                contours[len(contours) - 1][::1]
+                .reshape(
+                    contours[len(contours) - 1][::1].shape[0],
+                    contours[len(contours) - 1][::1].shape[2],
+                )
+                .tolist()
+            )
+            polygons.append((to_add, dataset_version.get_or_create_label(name=l)))
+        if len(polygons) > 0:
+            try:
+                annotation = asset.create_annotation(duration=0)
+                annotation.create_multiple_polygons(polygons)
+            except Exception as e:
+                print(e)
