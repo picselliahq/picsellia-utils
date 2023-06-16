@@ -1,3 +1,4 @@
 picsellia
 opencv-python
 tqdm
+numpy

@@ -83,7 +83,7 @@ def convert_seperated_multiclass_masks_to_polygons(data_path: str,
 
     Args:
         data_path: (str)  directory containing the images. Example: data_path = "archive/input"
-        mask_root_path: (str) directory that contains the masks directories. Example: mask_root_path = "Archive"
+        mask_root_path: (str) directory that contains the masks directories. Example: mask_root_path = "archive"
         dataset_version: (DatasetVersion) the dataset version containing the assets
 
     Returns: None
@@ -93,6 +93,7 @@ def convert_seperated_multiclass_masks_to_polygons(data_path: str,
     dataset_version.set_type(InferenceType.SEGMENTATION)
     input_dir = os.listdir(data_path)
     labels = os.listdir(mask_root_path)
+    # in case image directory is not in the same path as labels' directory comment following line
     labels.remove(os.path.basename(data_path))
     print(labels)
     for fname in tqdm.tqdm(input_dir[2:]):
@@ -103,18 +104,45 @@ def convert_seperated_multiclass_masks_to_polygons(data_path: str,
             im = cv2.imread(os.path.join(mask_root_path, l, fname))
             im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
             contours, _ = cv2.findContours(im, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            to_add = (
-                contours[len(contours) - 1][::1]
-                .reshape(
-                    contours[len(contours) - 1][::1].shape[0],
-                    contours[len(contours) - 1][::1].shape[2],
-                )
-                .tolist()
-            )
-            polygons.append((to_add, dataset_version.get_or_create_label(name=l)))
+            for c in contours:
+                if len(c) > 3:
+                    to_add = (
+                        c[::1]
+                        .reshape(
+                            c[::1].shape[0],
+                            c[::1].shape[2],
+                        )
+                        .tolist()
+                    )
+                    polygons.append((to_add, dataset_version.get_or_create_label(name=l)))
         if len(polygons) > 0:
             try:
                 annotation = asset.create_annotation(duration=0)
                 annotation.create_multiple_polygons(polygons)
             except Exception as e:
                 print(e)
+
+
+def prepare_mask_directories_for_multilabel(root_directory, label_to_mask_dict, mask_directory):
+    """
+    Create one directory per label, containing corresponding masks for that label
+    Args:
+        root_directory (str): directory that will contain folders with new mask files
+        label_to_mask_dict (dict): mapping between labels and mask values. Example: {'Cristallin':63 , 'Cornée':126 , 'Iris': 189, 'Angle':252}
+        mask_directory (str): directory containing masks.
+
+    Returns:
+
+    """
+
+    for key in label_to_mask_dict.keys():
+        print(key)
+        label_directory = os.path.join(root_directory, key)
+        os.mkdir(label_directory)  # create one directory per label
+
+        for image_file in tqdm.tqdm(os.listdir(mask_directory)):
+            image = cv2.imread(os.path.join(mask_directory, image_file), cv2.IMREAD_GRAYSCALE)
+            masks = np.where(image == int(label_to_mask_dict[key]), 1, 0)  # get corresponding mask
+
+            new_mask_path = os.path.join(label_directory, image_file.split('.')[0] + '.jpg')
+            cv2.imwrite(new_mask_path, masks)  # save mask
