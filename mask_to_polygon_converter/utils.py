@@ -76,14 +76,12 @@ def save_dict_as_json_file(dictionary: dict,
         out_file.write(orjson.dumps(dictionary, option=orjson.OPT_NAIVE_UTC | orjson.OPT_SERIALIZE_NUMPY))
 
 
-def convert_seperated_multiclass_masks_to_polygons(data_path: str,
-                                                   mask_root_path: str,
+def convert_seperated_multiclass_masks_to_polygons(data_directory: str,
                                                    dataset_version: DatasetVersion):
     """
 
     Args:
-        data_path: (str)  directory containing the images. Example: data_path = "archive/input"
-        mask_root_path: (str) directory that contains the masks directories. Example: mask_root_path = "archive"
+        data_directory: (str)  directory containing the images. Example: data_path = "archive/input"
         dataset_version: (DatasetVersion) the dataset version containing the assets
 
     Returns: None
@@ -91,17 +89,14 @@ def convert_seperated_multiclass_masks_to_polygons(data_path: str,
     """
 
     dataset_version.set_type(InferenceType.SEGMENTATION)
-    input_dir = os.listdir(data_path)
-    labels = os.listdir(mask_root_path)
-    # in case image directory is not in the same path as labels' directory comment following line
-    labels.remove(os.path.basename(data_path))
-    print(labels)
-    for fname in tqdm.tqdm(input_dir[2:]):
-        print(fname)
+    mask_root_directory = "label_masks"
+    input_dir = os.listdir(data_directory)
+    labels = os.listdir(mask_root_directory)
+    for fname in tqdm.tqdm(input_dir):
         asset = dataset_version.find_asset(filename=fname)
         polygons = []
         for l in labels:
-            im = cv2.imread(os.path.join(mask_root_path, l, fname))
+            im = cv2.imread(os.path.join(mask_root_directory, l, fname))
             im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
             contours, _ = cv2.findContours(im, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             for c in contours:
@@ -123,26 +118,24 @@ def convert_seperated_multiclass_masks_to_polygons(data_path: str,
                 print(e)
 
 
-def prepare_mask_directories_for_multilabel(root_directory, label_to_mask_dict, mask_directory):
+def prepare_mask_directories_for_multilabel(class_to_pixel_mapping, mask_directory):
     """
     Create one directory per label, containing corresponding masks for that label
     Args:
-        root_directory (str): directory that will contain folders with new mask files
-        label_to_mask_dict (dict): mapping between labels and mask values. Example: {'Cristallin':63 , 'Cornée':126 , 'Iris': 189, 'Angle':252}
+        class_to_pixel_mapping (dict): mapping between labels and mask values. Example: {"car": 1, "plane": 63, "boat": 127}
         mask_directory (str): directory containing masks.
 
     Returns:
 
     """
-
-    for key in label_to_mask_dict.keys():
-        print(key)
-        label_directory = os.path.join(root_directory, key)
-        os.mkdir(label_directory)  # create one directory per label
+    mask_root_directory = "label_masks"
+    for key in class_to_pixel_mapping.keys():
+        label_directory = os.path.join(mask_root_directory, key)
+        os.makedirs(label_directory, exist_ok=True)  # create one directory per label
 
         for image_file in tqdm.tqdm(os.listdir(mask_directory)):
             image = cv2.imread(os.path.join(mask_directory, image_file), cv2.IMREAD_GRAYSCALE)
-            masks = np.where(image == int(label_to_mask_dict[key]), 1, 0)  # get corresponding mask
+            masks = np.where(image == int(class_to_pixel_mapping[key]), 1, 0)  # get corresponding mask
 
             new_mask_path = os.path.join(label_directory, image_file.split('.')[0] + '.jpg')
             cv2.imwrite(new_mask_path, masks)  # save mask
