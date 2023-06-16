@@ -128,8 +128,7 @@ def prepare_mask_directories_for_multilabel(root_directory, label_to_mask_dict, 
     Create one directory per label, containing corresponding masks for that label
     Args:
         root_directory (str): directory that will contain folders with new mask files
-        label_to_mask_dict (dict): mapping between labels and mask values.
-                Example: {'label_1':63 , 'label_2':126 , 'label_3': 189, 'label_4':252}
+        label_to_mask_dict (dict): mapping between labels and mask values. Example: {'Cristallin':63 , 'Cornée':126 , 'Iris': 189, 'Angle':252}
         mask_directory (str): directory containing masks.
 
     Returns:
